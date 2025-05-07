@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        /* 添加视口meta标签 */
+        meta[name="viewport"] {
+            content: "width=device-width, initial-scale=1.0";
+        }
+        body {
+            background: #FFF7E8;
+        }
+
+        /* 调整容器布局 */
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 2vh;
+            padding: 0 5vw;
+        }
+
+        /* 响应式转盘尺寸 */
+        #wheel {
+            width: 80vw;
+            height: 80vw;
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            transition: transform 5s ease-out;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+
+        .segment {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            transform-origin: 100% 100%;
+            clip-path: polygon(0 0, 100% 0, 100% 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        #pointer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 60px;
+            background: #863506;
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+            transform: translate(-50%, -100%) scaleY(1.2);
+            z-index: 2;
+        }
+
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: #863506;
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        /* 添加内圆样式 */
+        .center-inner-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle at center, #FFF7E8 0%, #FFCF8B 100%);
+            border-radius: 50%;
+            z-index: 3;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        /* 文字适配 */
+        .segment div {
+            width: 30vw;
+            height: 8vw;
+            transform: rotate(22.5deg) translateX(8vw);
+            font-size: 4vw;
+        }
+
+        /* 按钮适配 */
+        button {
+            padding: 2vh 8vw;
+            font-size: 4.5vw;
+            background: #F6685D;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 3vh;
+            min-width: 40vw;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .container > div {
+            position: relative;
+        }
+
+        /* 结果文字适配 */
+        #result {
+            font-size: 5vw;
+            margin: 2vh 0;
+            text-align: center;
+        }
+
+        @media (min-width: 600px) {
+            /* 桌面端样式 */
+            #wheel {
+                width: 300px;
+                height: 300px;
+            }
+            .segment div {
+                width: 100px;
+                height: 30px;
+                transform: rotate(22.5deg) translateX(20px);
+                font-size: 16px;
+            }
+            button {
+                font-size: 18px;
+                min-width: auto;
+                padding: 12px 30px;
+            }
+            #result {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="position: relative;">
+            <div id="wheel"></div>
+            <div class="center-circle"></div>
+            <div class="center-inner-circle"></div>
+            <div id="pointer"></div>
+        </div>
+        <button onclick="startSpin()" id="spinBtn">开始抽奖</button>
+        <h2 id="result"></h2>
+    </div>
+
+    <script>
+        const prizes = [
+            '谢谢参与', '抓娃娃', '做美食', '看演出', 
+            '谢谢参与', '看电影', '烂苹果乐园', '吃大餐',
+        ];
+        const colors = ['#FF9A2E', '#FFE4BA', '#FF9A2E', '#FFE4BA', 
+                      '#FF9A2E', '#FFE4BA', '#FF9A2E', '#FFE4BA'];
+        
+        function createWheel() {
+            const wheel = document.getElementById('wheel');
+            const angle = 360 / prizes.length;
+            
+            prizes.forEach((text, index) => {
+                const segment = document.createElement('div');
+                segment.className = 'segment';
+                segment.style.backgroundColor = colors[index];
+                segment.style.transform = `rotate(${angle * index}deg)`;
+                
+                const content = document.createElement('div');
+                content.style.transform = `rotate(${angle/0.65}deg) translate(8vw, -10vw)`;
+                content.textContent = text;
+                
+                segment.appendChild(content);
+                wheel.appendChild(segment);
+            });
+        }
+
+        let isSpinning = false; 
+        
+        function startSpin() {
+            if(isSpinning) return;
+            isSpinning = true;
+            document.getElementById('spinBtn').disabled = true;
+            document.getElementById('result').textContent = '';
+
+            const wheel = document.getElementById('wheel');
+            const randomIndex = Math.floor(Math.random() * prizes.length);
+            const extraSpins = 5;
+            const sectorAngle = 360 / prizes.length;
+            
+            // 获取当前旋转角度（兼容首次旋转）
+            const currentRotation = (parseInt(getComputedStyle(wheel).transform.split(', ')[3]) || 0) % 360;
+            
+            // 计算目标角度（基于当前角度的绝对位置）
+            const targetAngle = currentRotation + (360 * extraSpins) + (360 - sectorAngle * (randomIndex + 0.5));
+            
+            // 重置动画
+            wheel.style.transition = 'none';
+            wheel.style.transform = `rotate(${currentRotation % 360}deg)`;
+            
+            // 强制重绘
+            void wheel.offsetWidth;
+            
+            // 应用新动画
+            wheel.style.transition = 'transform 5s ease-out';
+            wheel.style.transform = `rotate(${targetAngle}deg)`;
+            
+            setTimeout(() => {
+                isSpinning = false;
+                document.getElementById('spinBtn').disabled = false;
+            }, 5000);
+        }
+
+        // 初始化转盘
+        createWheel();
+    </script>
+</body>
+</html> 
